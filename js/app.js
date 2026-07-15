@@ -38,8 +38,7 @@
       // 1. МГНОВЕННЫЙ БЕЗОПАСНЫЙ СТАРТ (0 мс задержки) — интерфейс никогда не пустой!
       document.getElementById("city").innerText = "Определяем местоположение...";
       document.getElementById("weather-desc").innerText = "Разрешите доступ к геолокации или найдите город";
-      
-      // 2. Фоновое обновление реальными данными
+
       initApp();
       
       // Инициализация спецэффектов
@@ -230,23 +229,28 @@
     }
 
     function initApp() {
+      const savedCity = localStorage.getItem("weatherCity");
+      const savedLat = localStorage.getItem("weatherLat");
+      const savedLon = localStorage.getItem("weatherLon");
+
+      if (savedCity && savedLat && savedLon) {
+        fetchWeatherData(parseFloat(savedLat), parseFloat(savedLon), savedCity);
+        return;
+      }
+
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (position) => {
+            localStorage.setItem("weatherLat", position.coords.latitude);
+            localStorage.setItem("weatherLon", position.coords.longitude);
             fetchWeatherData(position.coords.latitude, position.coords.longitude, null);
           },
           () => {
-            document.getElementById("city").innerText = "Город не выбран";
+            document.getElementById("city").innerText = "Выберите город";
             document.getElementById("weather-desc").innerText = "Введите название города выше";
           },
-          {
-            enableHighAccuracy: true,
-            timeout: 5000
-          }
+          { enableHighAccuracy:true, timeout:5000 }
         );
-      } else {
-        document.getElementById("city").innerText = "Геолокация недоступна";
-        document.getElementById("weather-desc").innerText = "Введите название города выше";
       }
     }
 
@@ -261,6 +265,9 @@
         if (data && data.length > 0) {
           const { lat, lon, display_name } = data[0];
           const shortName = display_name.split(',')[0];
+          localStorage.setItem("weatherCity", shortName);
+          localStorage.setItem("weatherLat", lat);
+          localStorage.setItem("weatherLon", lon);
           fetchWeatherData(parseFloat(lat), parseFloat(lon), shortName);
         } else {
           showToast("Город не найден 🔍");
@@ -290,6 +297,9 @@
           }
         }
 
+        localStorage.setItem("weatherCity", finalCityName);
+        localStorage.setItem("weatherLat", lat);
+        localStorage.setItem("weatherLon", lon);
         updateUI(weatherData, aqiData, finalCityName);
         fetchKpIndex();
       } catch (err) {
