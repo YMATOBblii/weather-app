@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
+<title>Погода и Космос</title>
+<!-- PWA & Mobile Web App Meta Tags -->
+<meta content="yes" name="apple-mobile-web-app-capable"/>
+<meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"/>
+<meta content="Погода" name="apple-mobile-web-app-title"/>
+<meta content="#2e74d6" name="theme-color"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght=100;200;300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="css/style.css" rel="stylesheet"/>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2e74d6">
+</head>
+<body class="miui-bg min-h-screen bg-gradient-to-b from-[#3a88e9] to-[#7db6ff] text-white flex flex-col items-center justify-start p-4 sm:p-6 overflow-y-auto relative selection:bg-white/20" id="bg">
+<!-- ЖИВЫЕ ЭФФЕКТЫ ПОГОДЫ -->
+<div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+<div class="absolute top-[-15%] right-[-15%] w-[85vw] h-[85vw] max-w-[550px] max-h-[550px] rounded-full bg-amber-100/15 blur-[120px] sun-glow-effect hidden" id="fx-sun"></div>
+<div class="absolute inset-0 hidden" id="fx-rain"></div>
+<div class="absolute inset-0 hidden" id="fx-snow"></div>
+<div class="absolute inset-0 opacity-15 hidden" id="fx-clouds">
+<svg class="absolute top-8 left-0 w-[380px] h-auto text-white/30 cloud-layer-1" fill="currentColor" viewbox="0 0 100 100"><path d="M10 50 C 20 40, 40 40, 50 50 C 60 40, 80 40, 90 50 C 100 65, 80 80, 50 80 C 20 80, 0 65, 10 50 Z"></path></svg>
+<svg class="absolute top-36 left-0 w-[450px] h-auto text-white/20 cloud-layer-2" fill="currentColor" viewbox="0 0 100 100"><path d="M10 50 C 20 40, 40 40, 50 50 C 60 40, 80 40, 90 50 C 100 65, 80 80, 50 80 C 20 80, 0 65, 10 50 Z"></path></svg>
+</div>
+<div class="absolute inset-0 bg-white lightning-overlay hidden" id="fx-lightning"></div>
+<div class="absolute inset-0 hidden" id="fx-stars"></div>
+</div>
+<!-- Уведомления MIUI Toast -->
+<div class="fixed top-8 z-50 transform -translate-y-24 opacity-0 transition-all duration-500 max-w-sm w-full bg-black/45 backdrop-blur-3xl border border-white/10 py-3.5 px-6 rounded-full text-center text-sm font-medium tracking-wide shadow-2xl flex items-center justify-center" id="toast">
+<span id="toast-text">Уведомление</span>
+</div>
+<!-- ================= ГЛАВНЫЙ ИНТЕРФЕЙС ================= -->
+<div class="w-full max-w-md flex flex-col space-y-4 pb-16 z-10">
+<!-- Поиск городов (Мягкий премиум-стиль с тонкой рамкой и кликабельной кнопкой) -->
+<div class="relative w-full mt-2">
+<button class="absolute inset-y-0 left-0 pl-4 flex items-center z-20 hover:opacity-100 opacity-60 active:scale-95 transition-all" onclick="searchCity()" title="Найти город">
+<svg class="h-4.5 w-4.5 text-white" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"></path>
+</svg>
+</button>
+<input class="w-full bg-white/5 backdrop-blur-2xl border border-white/15 rounded-full py-3 pl-11 pr-16 text-white placeholder-white/30 outline-none focus:bg-white/10 focus:border-white/30 focus:ring-1 focus:ring-white/10 transition-all text-sm font-medium tracking-wide shadow-sm" id="city-input" onkeypress="if(event.key==='Enter') searchCity()" placeholder="Поиск города..." type="text"/>
+<!-- Кнопка "Найти" для удобного клика мышкой -->
+<button class="absolute inset-y-0 right-2 my-auto h-8 px-3.5 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/15 active:scale-95 transition-all text-[11px] font-bold uppercase tracking-wider text-white/90 z-20" onclick="searchCity()">
+        Найти
+      </button>
+</div>
+<!-- Заголовок локации -->
+<div class="text-center space-y-1">
+<h1 class="text-4xl font-light tracking-wide drop-shadow-sm" id="city">Златополь</h1>
+<p class="text-white/85 text-xs font-semibold tracking-wider uppercase" id="weather-desc">Проверяем небо...</p>
+</div>
+<!-- Температура и Краткое резюме -->
+<div class="text-center select-none py-1 relative">
+<div class="relative inline-block">
+<span class="text-[120px] font-thin leading-none tracking-tighter" id="temp">--</span>
+<span class="absolute top-2 text-5xl font-light opacity-85">°</span>
+</div>
+<div class="text-white/75 text-sm" id="feels-like">Ощущается как --°</div>
+</div>
+<!-- ИИ-АССИСТЕНТ (Только здесь советы) -->
+<div class="glass-card rounded-[28px] p-5 space-y-3">
+<div class="flex justify-between items-center text-[10px] font-bold uppercase text-white/65 tracking-wider">
+<span>Сводка</span>
+<span class="text-[9px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full font-bold uppercase">Анализ</span>
+</div>
+<div class="text-sm font-medium leading-relaxed text-white/95" id="ai-summary-output">
+        Считываем погоду и Kp-активность...
+      </div>
+<div class="flex flex-wrap gap-2 pt-2 border-t border-white/5">
+<button class="text-[10px] font-semibold bg-white/10 hover:bg-white/20 px-3.5 py-1.5 rounded-full transition-all" onclick="quickPrompt('Что мне сегодня надеть?')">Что надеть?</button>
+<button class="text-[10px] font-semibold bg-white/10 hover:bg-white/20 px-3.5 py-1.5 rounded-full transition-all" onclick="quickPrompt('Будет ли дождь в ближайшее время?')">Дождь?</button>
+<button class="text-[10px] font-semibold bg-white/10 hover:bg-white/20 px-3.5 py-1.5 rounded-full transition-all" onclick="quickPrompt('Как уберечься от магнитной бури?')">Голова и Kp</button>
+</div>
+</div>
+<!-- Карточка 1: Космическая погода (Kp-Index) -->
+<div class="glass-card rounded-[28px] p-5 flex flex-col space-y-4">
+<div class="flex justify-between items-center">
+<span class="text-[10px] font-bold tracking-wider text-white/65 uppercase">Геомагнитное поле</span>
+<span class="text-[9px] bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 px-2.5 py-0.5 rounded-full font-bold tracking-wide uppercase" id="kp-status">Измерение</span>
+</div>
+<div class="flex items-baseline space-x-1.5">
+<span class="text-3xl font-light" id="kp-value">Kp --</span>
+<span class="text-white/50 text-xs">из 9</span>
+</div>
+<!-- Градиентная шкала Kp -->
+<div class="relative w-full h-1.5 bg-white/20 rounded-full">
+<div class="absolute inset-0 rounded-full bg-gradient-to-r from-emerald-400 via-amber-400 to-rose-500"></div>
+<div class="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full border-[3px] border-slate-900 shadow-md transition-all duration-1000" id="kp-indicator" style="left: 0%;"></div>
+</div>
+<p class="text-xs text-white/75 leading-relaxed font-light" id="kp-advice">Анализируем солнечную активность и магнитосферу...</p>
+</div>
+<!-- Карточка 2: Почасовой прогноз и Табы "На потом" -->
+<div class="glass-card rounded-[28px] p-5 space-y-4">
+<div class="flex justify-between items-center border-b border-white/5 pb-2">
+<span class="text-[10px] font-bold tracking-wider text-white/65 uppercase">Прогноз на сегодня</span>
+<span class="text-[10px] text-white/65 font-bold uppercase tracking-wider">Почасовой</span>
+</div>
+<!-- Почасовая лента (Всегда видна вверху этой карточки) -->
+<div class="flex space-x-4 overflow-x-auto no-scrollbar pb-1" id="hourly-container">
+<!-- Сюда вставляются часы -->
+</div>
+<!-- Вкладки (Табы) "На потом" под почасовым прогнозом -->
+<div class="border-t border-white/5 pt-4">
+<div class="flex bg-white/5 p-1 rounded-full space-x-1">
+<button class="flex-1 text-[11px] font-bold uppercase tracking-wider py-2 rounded-full bg-white/10 text-white transition-all" id="tab-today-info" onclick="switchSubTab('today-info')">Сегодня подробно</button>
+<button class="flex-1 text-[11px] font-bold uppercase tracking-wider py-2 rounded-full text-white/50 hover:text-white transition-all" id="tab-week" onclick="switchSubTab('week')">Прогноз на 7 дней</button>
+</div>
+<!-- Контент вкладок -->
+<div class="mt-4">
+<!-- Контент: Сегодня подробно -->
+<div class="space-y-3" id="subtab-content-today-info">
+<div class="grid grid-cols-2 gap-3 text-xs text-white/80">
+<div class="bg-white/5 p-3 rounded-2xl flex flex-col justify-between">
+<span class="text-white/65 font-bold uppercase text-[9px] tracking-wider">Мин / Макс</span>
+<span class="text-base font-semibold mt-1" id="today-minmax">--° / --°</span>
+</div>
+<div class="bg-white/5 p-3 rounded-2xl flex flex-col justify-between">
+<span class="text-white/65 font-bold uppercase text-[9px] tracking-wider">УФ-Индекс</span>
+<span class="text-base font-semibold mt-1" id="today-uv-sub">--</span>
+</div>
+<div class="bg-white/5 p-3 rounded-2xl flex flex-col justify-between">
+<span class="text-white/65 font-bold uppercase text-[9px] tracking-wider">Восход солнца</span>
+<span class="text-base font-semibold mt-1" id="today-sunrise-sub">--:--</span>
+</div>
+<div class="bg-white/5 p-3 rounded-2xl flex flex-col justify-between">
+<span class="text-white/65 font-bold uppercase text-[9px] tracking-wider">Закат солнца</span>
+<span class="text-base font-semibold mt-1" id="today-sunset-sub">--:--</span>
+</div>
+</div>
+</div>
+<!-- Контент: Прогноз на 7 дней -->
+<div class="hidden space-y-2.5" id="subtab-content-week">
+<div class="space-y-2" id="daily-forecast-container">
+<!-- Сюда вставляются дни недели -->
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Сетка из дополнительных 6 плиток (Акрил 2.5) -->
+<div class="grid grid-cols-2 gap-4">
+<!-- Карточка 3: Ветер и Направление -->
+<div class="glass-card rounded-[28px] p-5 flex flex-col justify-between h-36">
+<div class="flex items-center justify-between text-white/50">
+<span class="text-[10px] font-bold tracking-wider uppercase">Ветер</span>
+<svg class="h-5 w-5 transition-transform duration-1000" fill="none" id="wind-compass" stroke="currentColor" style="width: 20px; height: 20px;" viewbox="0 0 24 24">
+<path d="M12 19V5m0 0L7 10m5-5l5 5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+</svg>
+</div>
+<div class="space-y-1">
+<div class="flex items-baseline space-x-1">
+<span class="text-2xl font-light" id="wind">--</span>
+<span class="text-xs text-white/60">м/с</span>
+</div>
+<span class="text-[11px] text-white/50 block font-light" id="visibility">Порывы: до -- м/с</span>
+</div>
+</div>
+<!-- Карточка 4: Влажность и точка росы -->
+<div class="glass-card rounded-[28px] p-5 flex flex-col justify-between h-36 relative overflow-hidden">
+<div class="flex items-center justify-between text-white/50">
+<span class="text-[10px] font-bold tracking-wider uppercase">Влажность</span>
+<span class="text-xs select-none">💧</span>
+</div>
+<div class="space-y-1 z-10">
+<span class="text-3xl font-light" id="humidity">--%</span>
+<span class="text-[11px] text-white/50 block font-light" id="dew-point">Точка росы: --°</span>
+</div>
+<div class="absolute bottom-0 left-0 w-full h-8 bg-white/5 blur-sm rounded-b-[28px]"></div>
+</div>
+<!-- Карточка 5: Давление и УФ -->
+<div class="glass-card rounded-[28px] p-5 flex flex-col justify-between h-36">
+<div class="flex items-center justify-between text-white/50">
+<span class="text-[10px] font-bold tracking-wider uppercase">Давление и УФ</span>
+<span class="text-xs select-none">☀️</span>
+</div>
+<div class="space-y-1">
+<span class="text-2xl font-light" id="pressure">--</span>
+<div class="flex items-center space-x-1 mt-1">
+<span class="text-[10px] uppercase font-bold tracking-wider text-white/40">УФ-Индекс:</span>
+<span class="text-xs font-semibold text-amber-300" id="uv-index">--</span>
+</div>
+</div>
+</div>
+<!-- Карточка 6: Солнечный трекер -->
+<div class="glass-card rounded-[28px] p-5 flex flex-col justify-between h-36">
+<span class="text-[10px] font-bold tracking-wider text-white/65 uppercase block">Солнечный цикл</span>
+<div class="relative w-full h-8 mt-1.5 flex items-center justify-center">
+<div class="absolute bottom-0 w-full h-full border-t border-dashed border-white/20 rounded-t-full"></div>
+<div class="absolute bottom-0 w-2.5 h-2.5 bg-amber-300 rounded-full shadow-md transition-all duration-1000" id="sun-arc-point" style="left: 50%; bottom: 0;"></div>
+</div>
+<div class="flex justify-between text-[11px] text-white/70 font-light pt-2.5 border-t border-white/5">
+<div class="flex flex-col">
+<span class="text-[9px] text-white/65 uppercase font-bold">Восход</span>
+<span id="sunrise">--:--</span>
+</div>
+<div class="flex flex-col text-right">
+<span class="text-[9px] text-white/65 uppercase font-bold">Закат</span>
+<span id="sunset">--:--</span>
+</div>
+</div>
+</div>
+<!-- Карточка 7: Фаза луны -->
+<div class="glass-card rounded-[28px] p-5 flex flex-col justify-between h-36">
+<div class="flex items-center justify-between text-white/50">
+<span class="text-[10px] font-bold tracking-wider uppercase">Фаза луны</span>
+<span class="text-sm" id="moon-icon">🌕</span>
+</div>
+<div class="space-y-1">
+<span class="text-2xl font-light block leading-tight mt-2" id="moon-phase-name">Загрузка...</span>
+</div>
+</div>
+<!-- Карточка 8: Воздух (AQI) -->
+<div class="glass-card rounded-[28px] p-5 flex flex-col justify-between h-36">
+<div class="flex items-center justify-between text-white/50">
+<span class="text-[10px] font-bold tracking-wider uppercase">Воздух</span>
+<span class="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.2 rounded-full font-bold uppercase tracking-wider" id="aqi-badge">Измерение</span>
+</div>
+<div class="space-y-1">
+<div class="flex items-baseline space-x-1">
+<span class="text-3xl font-light" id="aqi-value">--</span>
+<span class="text-xs text-white/50 font-bold">AQI</span>
+</div>
+<span class="text-[10px] text-white/60 block font-light leading-snug" id="aqi-desc">Анализ качества воздуха...</span>
+</div>
+</div>
+</div>
+</div>
+<script src="js/app.js"></script>
+<script>
+if('serviceWorker' in navigator){
+window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js'));
+}
+</script>
+</body>
+</html>
