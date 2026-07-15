@@ -36,7 +36,8 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       // 1. МГНОВЕННЫЙ БЕЗОПАСНЫЙ СТАРТ (0 мс задержки) — интерфейс никогда не пустой!
-      loadFallbackData("Златополь");
+      document.getElementById("city").innerText = "Определяем местоположение...";
+      document.getElementById("weather-desc").innerText = "Разрешите доступ к геолокации или найдите город";
       
       // 2. Фоновое обновление реальными данными
       initApp();
@@ -229,17 +230,23 @@
     }
 
     function initApp() {
-      // Инициализационный запуск (Златополь)
-      fetchWeatherData(49.2789, 36.2736, "Златополь");
-
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (position) => {
             fetchWeatherData(position.coords.latitude, position.coords.longitude, null);
           },
-          () => {},
-          { timeout: 2000 }
+          () => {
+            document.getElementById("city").innerText = "Город не выбран";
+            document.getElementById("weather-desc").innerText = "Введите название города выше";
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 5000
+          }
         );
+      } else {
+        document.getElementById("city").innerText = "Геолокация недоступна";
+        document.getElementById("weather-desc").innerText = "Введите название города выше";
       }
     }
 
